@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Match Parser - Venasbet</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0A2625 0%, #103F3E 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #9A7701;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #B5C3C3;
+            margin-bottom: 20px;
+        }
+        
+        .output-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #9A7701;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #9A7701;
+        }
+        
+        .results {
+            background: rgba(10, 38, 37, 0.7);
+            border-radius: 5px;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .match {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #9A7701;
+        }
+        
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .league {
+            font-weight: bold;
+            color: #B5C3C3;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .country-flag {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .status.live {
+            background: #f40c27;
+        }
+        
+        .status.finished {
+            background: #34c759;
+        }
+        
+        .status.upcoming {
+            background: #9A7701;
+        }
+        
+        .teams {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .team.home {
+            justify-content: flex-start;
+        }
+        
+        .team.away {
+            justify-content: flex-end;
+            flex-direction: row-reverse;
+            text-align: right;
+        }
+        
+        .team-flag {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+        
+        .score {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #9A7701;
+            margin: 0 15px;
+            min-width: 50px;
+            text-align: center;
+        }
+        
+        .prediction {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tip {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .tip.win {
+            background: #34c759;
+            color: white;
+        }
+        
+        .tip.loss {
+            background: #f40c27;
+            color: white;
+        }
+        
+        .tip.ongoing {
+            background: #9A7701;
+            color: white;
+        }
+        
+        .odds {
+            color: #B5C3C3;
+            font-weight: bold;
+        }
+        
+        .json-output {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .no-results {
+            text-align: center;
+            color: #B5C3C3;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #B5C3C3;
+            font-style: italic;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Venasbet Parser</h1>
+            <div class="subtitle">Extracts predictions from mastro-tips table</div>
+        </header>
+        
+        <div class="output-section">
+            <h2>MATCH PREDICTIONS & JSON</h2>
+            <div class="results" id="results">
+                <p class="loading">Waiting for HTML content...</p>
+            </div>
+            <div class="json-output" id="jsonOutput">{}</div>
+        </div>
+    </div>
+
+    <script>
+        // Variable that will contain the HTML to parse
+        var htmlContentVariable = '';
+        
+        // Function to set HTML content from Android
+        function setHtmlContent(html) {
+            htmlContentVariable = html;
+            // Automatically parse the HTML when it's set
+            parseAndDisplayResults();
+        }
+        
+        // Function to parse HTML and display results
+        function parseAndDisplayResults() {
+            if (!htmlContentVariable) {
+                document.getElementById('results').innerHTML = '<p class="no-results">No HTML content provided</p>';
+                return;
+            }
+            
+            const results = VENASBET(htmlContentVariable);
+            displayResults(results);
+        }
+        
+        // VENASBET Parser - Converts Java code to JavaScript
+        function VENASBET(html) {
+            try {
+                const jsonArray = [];
+                
+                // 1️⃣ Captura apenas a primeira tabela com class mastro-tips
+                const tablePattern = /<table[^>]*class="[^"]*mastro-tips[^"]*".*?<\/table>/is;
+                const tableMatch = html.match(tablePattern);
+                
+                if (!tableMatch) {
+                    return []; // se não encontrar a tabela
+                }
+                
+                const tableHtml = tableMatch[0];
+                
+                // 2️⃣ Regex para capturar cada <tr> da tabela
+                const rowPattern = /<tr[^>]*?>[\s\S]*?<td[^>]*?>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*?>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*?>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*?>([\s\S]*?)<\/td>[\s\S]*?<\/tr>/gi;
+                
+                let matcher;
+                while ((matcher = rowPattern.exec(tableHtml)) !== null) {
+                    const obj = {
+                        league: "",
+                        leagueflag: "https://primatips.com/images/tournament/default.png",
+                        team1: "",
+                        team2: "",
+                        team1flag: "",
+                        team2flag: "",
+                        date: "",
+                        time: "",
+                        scoreteam1: "",
+                        scoreteam2: "",
+                        tip: "",
+                        odd: "-", // Valor fixo conforme original
+                        result: "pending",
+                        status: "UPCOMING"
+                    };
+                    
+                    // Limpa HTML interno e espaços extras
+                    const timeRaw = matcher[1].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim().replace(/\s+/g, " ");
+                    const league = matcher[2].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim().replace(/\s+/g, " ");
+                    const fixture = matcher[3].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim().replace(/\s+/g, " ");
+                    const tip = matcher[4].replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").trim().replace(/\s+/g, " ");
+                    
+                    // Processa o campo time (pode conter data e hora)
+                    if (timeRaw && timeRaw.trim() !== "") {
+                        const timeParts = timeRaw.split(/\s+/);
+                        if (timeParts.length >= 2) {
+                            obj.date = timeParts[0].trim();
+                            obj.time = timeParts[1].trim();
+                        } else {
+                            // Se só tiver um valor, assume que é hora
+                            obj.time = timeRaw;
+                        }
+                    }
+                    
+                    // Separa team1 e team2 pelo VS
+                    if (fixture.toLowerCase().includes("vs")) {
+                        const parts = fixture.split(/vs/i); // case-insensitive
+                        if (parts.length >= 2) {
+                            let team1 = parts[0].trim();
+                            let team2 = parts[1].trim();
+                            
+                            // Remove possíveis scores entre parênteses dos nomes dos times
+                            team1 = team1.replace(/\([^)]*\)/g, "").trim();
+                            team2 = team2.replace(/\([^)]*\)/g, "").trim();
+                            
+                            obj.team1 = team1;
+                            obj.team2 = team2;
+                            
+                            // Tenta extrair scores se existirem
+                            const scorePattern = /\((\d+)\s*-\s*(\d+)\)/;
+                            const scoreMatch = fixture.match(scorePattern);
+                            if (scoreMatch) {
+                                obj.scoreteam1 = scoreMatch[1];
+                                obj.scoreteam2 = scoreMatch[2];
+                                // If scores exist, set status to FINISHED
+                                obj.status = "FINISHED";
+                            }
+                        }
+                    } else {
+                        obj.team1 = fixture.replace(/\([^)]*\)/g, "").trim();
+                        obj.team2 = "";
+                    }
+                    
+                    // Set other fields
+                    obj.league = league;
+                    obj.tip = tip;
+                    
+                    // Determine result based on scores if available
+                    if (obj.scoreteam1 && obj.scoreteam2) {
+                        const score1 = parseInt(obj.scoreteam1);
+                        const score2 = parseInt(obj.scoreteam2);
+                        
+                        if (!isNaN(score1) && !isNaN(score2)) {
+                            // Simple win/loss detection based on tip and scores
+                            const tipLower = obj.tip.toLowerCase();
+                            
+                            if (tipLower.includes("home") && score1 > score2) {
+                                obj.result = "win";
+                            } else if (tipLower.includes("away") && score2 > score1) {
+                                obj.result = "win";
+                            } else if ((tipLower.includes("draw") || tipLower.includes("x")) && score1 === score2) {
+                                obj.result = "win";
+                            } else if (tipLower.includes("over") && (score1 + score2) > 1.5) {
+                                obj.result = "win";
+                            } else if (tipLower.includes("under") && (score1 + score2) < 3.5) {
+                                obj.result = "win";
+                            } else if (tipLower.includes("1x") && score1 >= score2) {
+                                obj.result = "win";
+                            } else if (tipLower.includes("x2") && score2 >= score1) {
+                                obj.result = "win";
+                            } else {
+                                obj.result = "loss";
+                            }
+                        }
+                    }
+                    
+                    // Only add if we have at least team1
+                    if (obj.team1) {
+                        jsonArray.push(obj);
+                    }
+                }
+                
+                return jsonArray;
+                
+            } catch (e) {
+                console.error("Error parsing VENASBET:", e);
+                return [];
+            }
+        }
+        
+        // Display results function
+        function displayResults(matches) {
+            const resultsContainer = document.getElementById('results');
+            const jsonOutput = document.getElementById('jsonOutput');
+            
+            if (matches.length === 0) {
+                resultsContainer.innerHTML = '<p class="no-results">No matches found or parsing error occurred</p>';
+                jsonOutput.textContent = '[]';
+                return;
+            }
+            
+            // Display formatted results
+            resultsContainer.innerHTML = '';
+            matches.forEach(match => {
+                const matchEl = document.createElement('div');
+                matchEl.className = 'match';
+                
+                // Determine status class
+                let statusClass = 'upcoming';
+                let statusText = match.status || 'UPCOMING';
+                
+                if (statusText === 'FINISHED') {
+                    statusClass = 'finished';
+                } else if (statusText === 'LIVE') {
+                    statusClass = 'live';
+                } else if (statusText === 'UPCOMING') {
+                    statusClass = 'upcoming';
+                }
+                
+                // Determine tip class
+                let tipClass = '';
+                if (match.result === 'win') {
+                    tipClass = 'win';
+                } else if (match.result === 'loss') {
+                    tipClass = 'loss';
+                } else if (match.result === 'live' || match.result === 'pending') {
+                    tipClass = 'ongoing';
+                }
+                
+                // Prepare display values
+                const score1 = match.scoreteam1 || '-';
+                const score2 = match.scoreteam2 || '-';
+                const time = match.time || '';
+                const date = match.date || '';
+                const league = match.league || 'Unknown League';
+                const tip = match.tip || 'No prediction';
+                const odds = match.odd || '0';
+                
+                // Create datetime string
+                let datetimeStr = '';
+                if (date && time) {
+                    datetimeStr = `${date} ${time}`;
+                } else if (time) {
+                    datetimeStr = time;
+                } else if (date) {
+                    datetimeStr = date;
+                }
+                
+                matchEl.innerHTML = `
+                    <div class="match-header">
+                        <span class="league">
+                            <img class="country-flag" src="${match.leagueflag}" alt="League flag" onerror="this.style.display='none'">
+                            ${league}
+                        </span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span>${datetimeStr}</span>
+                            <span class="status ${statusClass}">${statusText}</span>
+                        </div>
+                    </div>
+                    <div class="teams">
+                        <div class="team home">
+                            <img class="team-flag" src="${match.team1flag}" alt="${match.team1}" onerror="this.style.display='none'">
+                            <span>${match.team1}</span>
+                        </div>
+                        <div class="score">${score1} : ${score2}</div>
+                        <div class="team away">
+                            <img class="team-flag" src="${match.team2flag}" alt="${match.team2}" onerror="this.style.display='none'">
+                            <span>${match.team2}</span>
+                        </div>
+                    </div>
+                    <div class="prediction">
+                        <span class="tip ${tipClass}">${tip}</span>
+                        <span class="odds">Odds: ${odds}</span>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(matchEl);
+            });
+            
+            // Display JSON output
+            jsonOutput.textContent = JSON.stringify(matches, null, 2);
+        }
+    </script>
+</body>
+</html>
